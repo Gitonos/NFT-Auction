@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFT Auction Board</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter font from Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .bid-animation {
+            animation: bidPop 0.5s ease-out;
+        }
+        @keyframes bidPop {
+            0% { transform: scale(1); color: inherit; }
+            50% { transform: scale(1.05); color: #90EE90; } /* Light green highlight */
+            100% { transform: scale(1); color: inherit; }
+        }
+        .cyber-gradient {
+            background-image: linear-gradient(135deg, #800080 0%, #90EE90 100%); /* Purple to Light Green */
+        }
+        .cyber-card-pattern {
+            background-image:
+              radial-gradient(circle at 10% 20%, rgba(204, 204, 204, 0.1) 0%, rgba(204, 204, 204, 0.05) 100%),
+              radial-gradient(circle at 90% 80%, rgba(204, 204, 204, 0.1) 0%, rgba(204, 204, 204, 0.05) 100%);
+            background-size: 150px 150px, 150px 150px;
+            background-position: top left, bottom right;
+        }
+        /* Ensure proper sizing for mobile */
+        .nft-card {
+          width: 100%; /* Full width on small screens */
+          max-width: 380px; /* Max width for larger mobiles/tablets */
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8 flex flex-col items-center">
+
+    <h1 class="text-4xl sm:text-5xl font-bold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-300">
+        NFT Auction Board
+    </h1>
+
+    <div id="nft-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full max-w-7xl">
+        <!-- NFT cards will be rendered here by JavaScript -->
+    </div>
+
+    <script>
+        // Utility function to convert PCM audio data to WAV format (if TTS were used, but not here)
+        // (Included for completeness from original React code, though not directly used for this app's core functionality)
+        function pcmToWav(pcmData, sampleRate) {
+          const numChannels = 1;
+          const bytesPerSample = 2; // 16-bit PCM
+          const byteRate = numChannels * sampleRate * bytesPerSample;
+          const blockAlign = numChannels * bytesPerSample;
+
+          const wavBuffer = new ArrayBuffer(44 + pcmData.byteLength);
+          const view = new DataView(wavBuffer);
+
+          // RIFF chunk descriptor
+          writeString(view, 0, 'RIFF');
+          view.setUint32(4, 36 + pcmData.byteLength, true);
+          writeString(view, 8, 'WAVE');
+
+          // FMT sub-chunk
+          writeString(view, 12, 'fmt ');
+          view.setUint32(16, 16, true); // Subchunk1Size for PCM
+          view.setUint16(20, 1, true); // AudioFormat (PCM = 1)
+          view.setUint16(22, numChannels, true);
+          view.setUint32(24, sampleRate, true);
+          view.setUint32(28, byteRate, true);
+          view.setUint16(32, blockAlign, true);
+          view.setUint16(34, bytesPerSample * 8, true); // BitsPerSample
+
+          // Data sub-chunk
+          writeString(view, 36, 'data');
+          view.setUint32(40, pcmData.byteLength, true);
+
+          // Write the PCM data
+          new Uint8Array(wavBuffer, 44).set(new Uint8Array(pcmData.buffer));
+
+          return new Blob([wavBuffer], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, str) {
+          for (let i = 0; i < str.length; i++) {
+            view.setUint8(offset + i, str.charCodeAt(i));
+          }
+        }
+
+        // Function to convert base64 to ArrayBuffer (if needed for audio)
+        // (Included for completeness from original React code, though not directly used for this app's core functionality)
+        function base64ToArrayBuffer(base64) {
+          const binaryString = window.atob(base64);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          return bytes.buffer;
+        }
+
+        const initialNFTs = [
+          {
+            id: 'nft-1',
+            title: 'Cyberpunk Bloom',
+            artist: 'Digital Dreamer',
+            currentBid: 0.85,
+            imageUrl: 'https://placehold.co/400x400/800080/FFFFFF?text=NFT+01', // Placeholder purple
+            description: 'A vibrant digital flora in a futuristic landscape.',
+            bidAnimation: false,
+            generatingImage: false,
+          },
+          {
+            id: 'nft-2',
+            title: 'Neon Skyline',
+            artist: 'Urban Visionary',
+            currentBid: 1.20,
+            imageUrl: 'https://placehold.co/400x400/90EE90/000000?text=NFT+02', // Placeholder light green
+            description: 'The city lights never sleep, captured in a dynamic frame.',
+            bidAnimation: false,
+            generatingImage: false,
+          },
+          {
+            id: 'nft-3',
+            title: 'Abstract Grid',
+            artist: 'Pattern Master',
+            currentBid: 0.95,
+            imageUrl: 'https://placehold.co/400x400/800080/FFFFFF?text=NFT+03',
+            description: 'Complex patterns forming an infinite digital matrix.',
+            bidAnimation: false,
+            generatingImage: false,
+          },
+          {
+            id: 'nft-4',
+            title: 'Quantum Cascade',
+            artist: 'Future Sculptor',
+            currentBid: 1.50,
+            imageUrl: 'https://placehold.co/400x400/90EE90/000000?text=NFT+04',
+            description: 'Flowing energy of a quantum reality.',
+            bidAnimation: false,
+            generatingImage: false,
+          },
+        ];
+
+        let nfts = [...initialNFTs]; // Use a mutable copy for state management
+
+        // Function to render/update NFT cards in the DOM
+        function renderNFTs() {
+            const nftContainer = document.getElementById('nft-container');
+            nftContainer.innerHTML = ''; // Clear existing cards
+
+            nfts.forEach(nft => {
+                const card = document.createElement('div');
+                card.id = `nft-card-${nft.id}`;
+                card.className = `nft-card relative cyber-gradient cyber-card-pattern p-6 rounded-2xl shadow-2xl border border-purple-500 overflow-hidden transform hover:scale-105 transition-all duration-300 ease-in-out`;
+
+                card.innerHTML = `
+                    <!-- Background glowing effect -->
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-700 to-green-500 opacity-20 blur-xl animate-pulse"></div>
+
+                    <div class="relative z-10 flex flex-col items-center">
+                        <img
+                            src="${nft.imageUrl}"
+                            alt="${nft.title}"
+                            class="w-full h-auto object-cover rounded-xl border-2 border-green-400 mb-4 shadow-md"
+                            onerror="this.onerror=null;this.src='https://placehold.co/400x400/800080/FFFFFF?text=Image+Failed';"
+                        />
+                        <h2 class="text-2xl font-bold text-green-300 mb-2">${nft.title}</h2>
+                        <p class="text-purple-200 text-sm mb-1">Artist: ${nft.artist}</p>
+                        <p id="current-bid-${nft.id}" class="text-xl font-semibold mb-4 ${nft.bidAnimation ? 'bid-animation' : ''}">
+                            Current Bid: <span class="text-green-400">${nft.currentBid.toFixed(2)} ETH</span>
+                        </p>
+                        <p class="text-gray-300 text-center text-sm mb-4">${nft.description}</p>
+
+                        <div class="flex flex-col sm:flex-row gap-3 w-full justify-center">
+                            <button
+                                id="bid-button-${nft.id}"
+                                class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all duration-200 ease-in-out transform hover:-translate-y-1 active:scale-95 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75 w-full"
+                            >
+                                Place Bid
+                            </button>
+                            <button
+                                id="generate-button-${nft.id}"
+                                class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all duration-200 ease-in-out transform hover:-translate-y-1 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-opacity-75 w-full ${nft.generatingImage ? 'opacity-70 cursor-not-allowed' : ''}"
+                                ${nft.generatingImage ? 'disabled' : ''}
+                            >
+                                ${nft.generatingImage ? `
+                                    <span class="flex items-center justify-center">
+                                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Generating...
+                                    </span>
+                                ` : 'Generate NFT Image'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+                nftContainer.appendChild(card);
+
+                // Add event listeners
+                document.getElementById(`bid-button-${nft.id}`).addEventListener('click', () => simulateBid(nft.id));
+                document.getElementById(`generate-button-${nft.id}`).addEventListener('click', () => generateNftImage(
+                    nft.id,
+                    `A futuristic and abstract digital art piece for an NFT titled "${nft.title}" with elements of purple and light green, intricate circuitry patterns, and glowing neon lines. High detail, vibrant, cyber, sharp focus.`
+                ));
+            });
+        }
+
+        // Function to simulate a bid update with animation
+        function simulateBid(id) {
+            nfts = nfts.map(nft => {
+                if (nft.id === id) {
+                    const newBid = parseFloat((nft.currentBid + 0.01 + Math.random() * 0.1).toFixed(2));
+                    return { ...nft, currentBid: newBid, bidAnimation: true };
+                }
+                return nft;
+            });
+            renderNFTs(); // Re-render to apply animation class and new bid
+
+            // Remove animation class after a short delay
+            setTimeout(() => {
+                nfts = nfts.map(nft => (nft.id === id ? { ...nft, bidAnimation: false } : nft));
+                renderNFTs(); // Re-render to remove animation class
+            }, 500); // Animation duration
+        }
+
+        // Function to generate an image for an NFT card using Imagen API
+        async function generateNftImage(id, prompt) {
+            nfts = nfts.map(nft => (nft.id === id ? { ...nft, generatingImage: true } : nft));
+            renderNFTs(); // Re-render to show loading state
+
+            let retries = 0;
+            const maxRetries = 5;
+            const baseDelay = 1000; // 1 second
+
+            while (retries < maxRetries) {
+                try {
+                    const payload = {
+                        instances: { prompt: prompt },
+                        parameters: { sampleCount: 1 },
+                    };
+                    const apiKey = ""; // Canvas will provide this API key at runtime
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+
+                    const result = await response.json();
+
+                    if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                        const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                        nfts = nfts.map(nft =>
+                            nft.id === id ? { ...nft, imageUrl: imageUrl, generatingImage: false } : nft
+                        );
+                        renderNFTs(); // Re-render with new image and disabled loading
+                        return; // Success, exit loop
+                    } else {
+                        console.error('Image generation failed: Unexpected API response structure', result);
+                        throw new Error('Unexpected API response structure');
+                    }
+                } catch (error) {
+                    console.error('Error generating image:', error);
+                    retries++;
+                    if (retries < maxRetries) {
+                        const delay = baseDelay * Math.pow(2, retries - 1); // Exponential backoff
+                        await new Promise(res => setTimeout(res, delay));
+                    }
+                }
+            }
+            console.error('Max retries reached. Failed to generate image.');
+            nfts = nfts.map(nft => (nft.id === id ? { ...nft, generatingImage: false } : nft));
+            renderNFTs(); // Re-render to remove loading state on failure
+        }
+
+        // Initial render when the page loads
+        document.addEventListener('DOMContentLoaded', renderNFTs);
+    </script>
+</body>
+</html>
